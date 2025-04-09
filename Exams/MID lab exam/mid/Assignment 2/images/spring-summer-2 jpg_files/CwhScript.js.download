@@ -1,0 +1,915 @@
+"use strict";
+
+async function r(f) {
+  /in/.test(document.readyState) ? setTimeout("r(" + f + ")", 9) : f();
+}
+
+// use like
+r(async function() {
+  let API_URL = "https://production.api.harperconcierge.com";
+  let cartDataToBeSent;
+  let info_to_be_sent;
+  let new_items = [];
+  let harperErrorStatus;
+  let partner;
+  let partnerId;
+  let importCSS;
+  let redirectAddress;
+  // Var for Error PopUp
+  let messageOne;
+  let messageTwo;
+  let preorderItem = [];
+  let blockedItem = [];
+  let availableItem = [];
+  let itemsToBeSent = [];
+  let partiallyBlocked = [];
+  let contentNotInserted = true;
+  let canProceed = true;
+  let createCartwithAllItem = true;
+
+  /**
+   * Show CwH
+   * @returns {Promise<void>}
+   */
+  let showCwH = async function() {
+    document
+      .getElementById("harper-concierge-slider")
+      .classList.toggle("harper-content");
+    document
+      .getElementById("harper-concierge-slider")
+      .classList.toggle("closed");
+    document.getElementById("harper").classList.toggle("closed");
+    document.getElementById("close-button").classList.toggle("hidden");
+    document
+      .getElementById("london-message")
+      .classList.toggle("harper-cwh-hidden");
+    document.getElementById("harper").classList.toggle("border-popup");
+    if (partner.enable_icon_question === false) {
+      document.getElementById("icon__question").classList.add("hidden");
+    }
+  };
+
+  /**
+   * Close CwH
+   * @returns {Promise<void>}
+   */
+  let closeCwH = async function() {
+    document.getElementById("harper-confirm-popup").style.display = "none";
+  };
+
+  /**
+   * Show error PopUp
+   */
+  let openErrorPopUp = function() {
+    let classes = [];
+    Array.from(document.getElementsByClassName("modal-mask")).forEach(function(
+      element
+    ) {
+      classes.push(element);
+    });
+    Array.from(document.getElementsByClassName("popup-message")).forEach(
+      function(element) {
+        classes.push(element);
+      }
+    );
+    Array.from(classes).forEach(function(el) {
+      el.classList.toggle("active");
+    });
+  };
+
+  /**
+   *Close Error preorder
+   */
+  let closeErrorPopUp = function() {
+    let classes = [];
+    Array.from(document.getElementsByClassName("modal-mask")).forEach(function(
+      element
+    ) {
+      classes.push(element);
+    });
+    Array.from(document.getElementsByClassName("popup-message")).forEach(
+      function(element) {
+        classes.push(element);
+      }
+    );
+    Array.from(classes).forEach(function(el) {
+      el.classList.remove("active");
+    });
+  };
+
+  /**
+   * Get cart details
+   * @returns {Promise<any>}
+   */
+  let getPartnerDetails = async function() {
+    let element = document.getElementById("harper-identification");
+    if (element) {
+      partnerId = element.className;
+      let response = await fetch(
+        "https://s3-eu-west-1.amazonaws.com/harper.assets/" +
+          partnerId +
+          ".json"
+      );
+      partner = await response.json();
+    }
+  };
+
+  /**
+   * Define which env to use
+   */
+  let setEnvs = async function() {
+    if (partner.env) {
+      API_URL = partner.env.api_url;
+      redirectAddress = partner.env.checkout_url;
+    } else {
+      API_URL = "https://production.api.harperconcierge.com";
+      redirectAddress = "https://checkout.harperconcierge.com/?c=";
+    }
+  };
+
+  /**
+   * Get cart
+   * Get cart items and assign to variable
+   * @returns {Promise<void>}
+   */
+  let getCart = async function() {
+    let response = await fetch("/cart.js");
+    return await response.json();
+  };
+
+  /**
+   * Check postcode
+   * @returns {Promise<void>}
+   */
+  let checkPostcode = async function() {
+    cartDataToBeSent = await getCart();
+    cartDataToBeSent["postcode"] = document.querySelector(
+      'input[name="postcode"]'
+    ).value;
+
+    harperErrorStatus = false;
+    document.getElementById("harper-error").innerHTML = "";
+
+    if (cartDataToBeSent["postcode"] === "" && !harperErrorStatus) {
+      document.getElementById("harper-error").innerHTML =
+        "Your postcode cannot be empty";
+      harperErrorStatus = true;
+    } else {
+      let new_items2 = [];
+      for (let i = 0; i < cartDataToBeSent.items.length; i++) {
+        new_items2.push({
+          id: cartDataToBeSent.items[i].id.toString(),
+          product_id: cartDataToBeSent.items[i].product_id,
+          price: cartDataToBeSent.items[i].final_price,
+          name: cartDataToBeSent.items[i].title,
+          sku: cartDataToBeSent.items[i].sku,
+          discount: cartDataToBeSent.items[i].discounted_price.toString(),
+          order_id: "",
+          size: cartDataToBeSent.items[i].variant_title || "",
+          colour: cartDataToBeSent.items[i].colour || "",
+          qty: cartDataToBeSent.items[i].quantity,
+          images: [
+            {
+              url: cartDataToBeSent.items[i].image,
+              size: "",
+            },
+          ],
+          additional_attributes: {
+            name: "",
+            value: "",
+            shopify_details: cartDataToBeSent.items[i],
+          },
+        });
+      }
+      const info_to_be_sent2 = {
+        postcode: cartDataToBeSent.postcode,
+        partner: partner.partner_reference,
+        items: new_items2,
+      };
+      const location2 = API_URL + "/api/check-postcode/";
+      const settings2 = {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MmFjOGU2MTA0YmViOTQ2NWEyZDU1MTEiLCJlbWFpbCI6ImRhdGFzdXBwb3J0QGhhcnBlcmNvbmNpZXJnZS5jb20iLCJpYXQiOjE2NTU0NzU5NTMsImV4cCI6MTY1Nzg5NTE1M30.ujMNnjg0vFdPPn-uYzAGXyUZhFAygU_D-i55YBJjTeY",
+        },
+        body: JSON.stringify(info_to_be_sent2),
+      };
+      let result;
+      try {
+        const fetchResponse = await fetch(location2, settings2);
+        result = await fetchResponse.json();
+      } catch (e) {
+        return e;
+      }
+
+      if (result.isValid) {
+        hideElementVisibility(["harper-warning", "harper-error"]);
+        await createCart();
+      } 
+      else if (result.error.data && result.error.data.success === false) {
+        if (
+          result.error.data.items_block &&
+          result.error.data.items_block.length > 0
+        ) {
+          createCartwithAllItem = false;
+          messageOne = partner.popup2_step_1_message;
+          messageTwo = partner.popup2_step_2_message;
+          preorderItem = result.error.data.items_pre_order;
+          blockedItem = result.error.data.items_block;
+          availableItem = result.error.data.items_available;
+          partiallyBlocked = result.error.data.items_partially_blocked;
+
+          document.getElementById("harper-error-message1").innerHTML =
+            messageOne;
+
+          if (partner.partner_reference === "shrimps") {
+            document
+              .getElementById("harper-preorder-modal")
+              .classList.add("font-configuration");
+            document
+              .getElementById("harper-preorder-modal")
+              .classList.remove("modal-container");
+          }
+
+          for (let i = 0; i < blockedItem.length; i++) {
+            document.getElementById("harper-blocked-item").innerHTML +=
+              blockedItem[i].name + "<br />";
+          }
+
+          if (partiallyBlocked.length > 0) {
+            for (let i = 0; i < partiallyBlocked.length; i++) {
+              document.getElementById("harper-blocked-item").innerHTML +=
+                partiallyBlocked[i].name + "<br />";
+            }
+          }
+
+          if (preorderItem.length > 0) {
+            for (let i = 0; i < preorderItem.length; i++) {
+              document.getElementById("harper-blocked-item").innerHTML +=
+                preorderItem[i].name + "<br />";
+            }
+          }
+
+          if (partiallyBlocked.length > 0 && availableItem.length > 0) {
+            itemsToBeSent = availableItem.concat(partiallyBlocked);
+          } else {
+            itemsToBeSent = availableItem;
+          }
+
+          if (
+            result.error.data.can_proceed === false ||
+            (result.error.data.can_proceed === true &&
+              partner.completely_block_sale_item === true)
+          ) {
+            document.getElementById("harper-preorder-button").innerHTML =
+              "CHECKOUT";
+            document
+              .getElementById("harper-order-brand")
+              .classList.add("place-order-hide");
+            document
+              .getElementById("harper-order-brand")
+              .classList.remove("place-order");
+
+            document
+              .getElementById("harper-error-message2")
+              .classList.add("harper-message2-hide");
+            document
+              .getElementById("harper-error-message2")
+              .classList.remove("harper-message2");
+
+            canProceed = false;
+          } else {
+            document.getElementById("harper-preorder-button").innerHTML =
+              "PROCEED ANYWAY";
+            document.getElementById("harper-order-brand").innerHTML =
+              "Place full order with " + partner.partner_name + "";
+            document
+              .getElementById("harper-order-brand")
+              .classList.add("place-order");
+            document
+              .getElementById("harper-order-brand")
+              .classList.remove("place-order-hide");
+            document.getElementById("harper-error-message2").innerHTML =
+              messageTwo;
+            document
+              .getElementById("harper-error-message2")
+              .classList.remove("harper-message2-hide");
+            document
+              .getElementById("harper-error-message2")
+              .classList.add("harper-message2");
+            canProceed = true;
+          }
+          openErrorPopUp();
+        } else {
+          createCartwithAllItem = false;
+          messageOne = partner.popup_step_1_message;
+          messageTwo = partner.popup_step_2_message;
+          preorderItem = result.error.data.items_pre_order;
+          blockedItem = result.error.data.items_block;
+          availableItem = result.error.data.items_available;
+          partiallyBlocked = result.error.data.items_partially_blocked;
+
+          document.getElementById("harper-error-message1").innerHTML =
+            messageOne;
+
+          if (partner.partner_reference === "shrimps") {
+            document
+              .getElementById("harper-preorder-modal")
+              .classList.add("font-configuration");
+            document
+              .getElementById("harper-preorder-modal")
+              .classList.remove("modal-container");
+          }
+
+          for (let i = 0; i < preorderItem.length; i++) {
+            document.getElementById("harper-preorder-item").innerHTML +=
+              preorderItem[i].name + "<br />";
+          }
+
+          if (
+            (preorderItem.length > 0 &&
+              partiallyBlocked.length > 0 &&
+              availableItem.length == 0) ||
+            (partiallyBlocked.length > 0 &&
+              availableItem.length == 0 &&
+              preorderItem.length == 0)
+          ) {
+            for (let i = 0; i < partiallyBlocked.length; i++) {
+              document.getElementById("harper-blocked-item").innerHTML +=
+                partiallyBlocked[i].name + "<br />";
+            }
+          }
+
+          if (partiallyBlocked.length > 0 && availableItem.length > 0) {
+            itemsToBeSent = availableItem.concat(partiallyBlocked);
+          } else {
+            itemsToBeSent = availableItem;
+          }
+
+          if (result.error.data.can_proceed === false) {
+            document.getElementById("harper-preorder-button").innerHTML =
+              "CHECKOUT";
+            document
+              .getElementById("harper-order-brand")
+              .classList.add("place-order-hide");
+            document
+              .getElementById("harper-order-brand")
+              .classList.remove("place-order");
+            document
+              .getElementById("harper-error-message2")
+              .classList.add("harper-message2-hide");
+            document
+              .getElementById("harper-error-message2")
+              .classList.remove("harper-message2");
+            canProceed = false;
+          } else {
+            document.getElementById("harper-preorder-button").innerHTML =
+              "PROCEED ANYWAY";
+            document.getElementById("harper-order-brand").innerHTML =
+              "Place full order with " + partner.partner_name + "";
+            document
+              .getElementById("harper-order-brand")
+              .classList.add("place-order");
+            document
+              .getElementById("harper-order-brand")
+              .classList.remove("place-order-hide");
+            document.getElementById("harper-error-message2").innerHTML =
+              messageTwo;
+            document
+              .getElementById("harper-error-message2")
+              .classList.remove("harper-message2-hide");
+            document
+              .getElementById("harper-error-message2")
+              .classList.add("harper-message2");
+            canProceed = true;
+          }
+          openErrorPopUp();
+        }
+      }
+       else if (result.error) {
+        hideElementVisibility(["harper-success", "harper-warning"]);
+        unHideElementVisibility("harper-error", result.error);
+        document.getElementById("harper-success").innerHTML = "";
+        document.getElementById("harper-error").innerHTML = result.error;
+        harperErrorStatus = true;
+      } 
+      document.body.classList.add("harper-inserted");
+    }
+  };
+
+  /**
+   * Check postcode
+   * @returns {Promise<void>}
+   */
+  let checkProceed = async function() {
+    await closeErrorPopUp();
+    if (canProceed === false) {
+      const address = window.location.origin + "/checkout";
+      window.location.href = address;
+    } else {
+      await createCart();
+    }
+  };
+
+  let hideElementVisibility = function(elementIds) {
+    elementIds.forEach((elementId) => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.classList.add("hidden");
+        element.innerHTML = "";
+      }
+    });
+  }
+
+  let unHideElementVisibility = function(elementId, content="") {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.classList.remove("hidden");
+      element.innerHTML = content;
+    }
+  }
+
+  /**
+   * Create Cart
+   * Create cart and redirect customer to CwH
+   * @returns {Promise<any>}
+   */
+  let createCart = async function() {
+    info_to_be_sent = {
+      return_url: window.location.href,
+      cart_id: cartDataToBeSent.token,
+      partner_reference: partner.partner_reference,
+      email: "",
+      appointment: {},
+      customer: {},
+      items: [],
+    };
+
+    new_items = [];
+
+    if (createCartwithAllItem === true) {
+      for (let i = 0; i < cartDataToBeSent.items.length; i++) {
+        new_items.push({
+          id: cartDataToBeSent.items[i].id.toString(),
+          product_id: cartDataToBeSent.items[i].product_id,
+          price: cartDataToBeSent.items[i].final_price,
+          name: cartDataToBeSent.items[i].title,
+          sku: cartDataToBeSent.items[i].sku,
+          discount: cartDataToBeSent.items[i].discounted_price.toString(),
+          order_id: "",
+          size: cartDataToBeSent.items[i].variant_title || "",
+          colour: cartDataToBeSent.items[i].colour || "",
+          qty: cartDataToBeSent.items[i].quantity,
+          images: [
+            {
+              url: cartDataToBeSent.items[i].image,
+              size: "",
+            },
+          ],
+          additional_attributes: {
+            name: "",
+            value: "",
+            shopify_details: cartDataToBeSent.items[i],
+          },
+        });
+      }
+    } else {
+      for (let i = 0; i < itemsToBeSent.length; i++) {
+        new_items.push({
+          id: itemsToBeSent[i].id.toString(),
+          product_id: itemsToBeSent[i].product_id,
+          price: itemsToBeSent[i].price,
+          name: itemsToBeSent[i].name,
+          sku: itemsToBeSent[i].sku,
+          discount: itemsToBeSent[i].discount,
+          order_id: "",
+          size: itemsToBeSent[i].size,
+          colour: itemsToBeSent[i].colour,
+          qty: itemsToBeSent[i].qty,
+          images: [
+            {
+              url: itemsToBeSent[i].images[0].url,
+              size: "",
+            },
+          ],
+          additional_attributes: {
+            name: "",
+            value: "",
+            shopify_details:
+              itemsToBeSent[i].additional_attributes.shopify_details,
+          },
+        });
+      }
+    }
+
+    info_to_be_sent.items = new_items;
+    info_to_be_sent.postcode = document.querySelector(
+      'input[name="postcode"]'
+    ).value;
+
+    const location = API_URL + "/api/carts/create";
+    const settings = {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MmFjOGU2MTA0YmViOTQ2NWEyZDU1MTEiLCJlbWFpbCI6ImRhdGFzdXBwb3J0QGhhcnBlcmNvbmNpZXJnZS5jb20iLCJpYXQiOjE2NTU0NzU5NTMsImV4cCI6MTY1Nzg5NTE1M30.ujMNnjg0vFdPPn-uYzAGXyUZhFAygU_D-i55YBJjTeY",
+      },
+      body: JSON.stringify(info_to_be_sent),
+    };
+    try {
+      const fetchResponse = await fetch(location, settings);
+      const data = await fetchResponse.json();
+      const address =
+        redirectAddress +
+        data.data.cart.cart_pid +
+        "&utm_source=" +
+        partner.partner_reference +
+        "&utm_medium=website";
+      window.location.href = address;
+      await closeCwH();
+    } catch (e) {
+      return e;
+    }
+  };
+
+  /**
+   * Calling all methods
+   */
+  await getPartnerDetails();
+  await getCart();
+  await setEnvs();
+
+  /**
+   * CwH and Popup Templates
+   */
+  const postcode_checker_template =
+    "<div>\n" +
+    '    <h3 id="harper_try_at_home_button" class="try-at-home-btn" class="header">\n' + partner.try_at_home_btn_text +
+    '</h3>\n' +
+    "</div>\n" +
+    '<div id="london-message" class="harper-bottom-message">\n' +
+    "    <p>" +
+    partner.message_under_try_at_home_btn +
+    "</p>\n" +
+    "</div>\n" +
+    "\n" +
+    '<div id="harper-checkout-wrapper" class="harper-wrapper">\n' +
+    '    <div class="vl-popup closed" id="harper">\n' +
+    '        <div id="close-button" class="vl-close-button hidden">\n' +
+    '            <svg style="height: 15px; width: 15px;" class="Icon Icon--close" role="presentation" viewBox="0 0 16 14">\n' +
+    '                <path d="M15 0L1 14m14 0L1 0" stroke="currentColor" fill="none" fill-rule="evenodd"></path>\n' +
+    "            </svg>\n" +
+    "        </div>\n" +
+    '        <div id="harper-concierge-slider" class="closed clearfix">\n' +
+    '            <div class="vl-popup-title">\n' +
+    '                <h1 class="popup-title">' +
+    partner.postcode_checker_title +"</h1>\n" +
+    partner.cwh_content +
+    "            </div>\n" +
+    '            <div class="vl-send-basket-form">\n' +
+    '                <div id="harper-error" class="vl-error-message"></div>\n' +
+    '                <div id="harper-warning" class="vl-error-message" style="color: black;"></div>\n' +
+    '                <div id="harper-success" class="vl-success-message hidden"></div>\n' +
+    '                <form name="harper-send-to-parent-form" id="harper-send-to-parent-form" class="vl-form-container">\n' +
+    '                    <input id="harper-cart-data" type="hidden" name="harper-cartdata" value=""/>\n' +
+    '                    <input type="hidden" name="harper-retailer" value="1011">\n' +
+    '                    <div class="vl-input-holder">\n' +
+    "                        <input\n" +
+    '                                type="text"\n' +
+    '                                class="form-control"\n' +
+    '                                id="postcode"\n' +
+    '                                name="postcode"\n' +
+    '                                placeholder="'+partner.post_code_placeholder+'"\n' +
+    '                                value=""/>\n' +
+    "                    </div>\n" +
+    '                    <div class="vl-input-holder">\n' +
+    '                        <button id="harper_continue_button" type="button">' +
+    partner.postcode_checker_btn_text +
+    "</button>\n" +
+    "                    </div>\n" +
+    "                </form>\n" +
+    "            </div>\n" +
+    "        </div>\n" +
+    '                <div id="icon__question" class="message_postcode">\n' +
+    " <p>" +partner.message_under_postcode_checker +
+    '                <svg class="open-harper-modal" width="13" height="13" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">\n' +
+    '                  <circle cx="9" cy="9" r="8.5" stroke="#1D1D1B"></circle>\n' +
+    '                  <path d="M5.625 6.36986H7.34576C7.40434 5.47653 8.0121 4.90538 8.95669 4.90538C9.87931 4.90538 10.4944 5.45456 10.4944 6.21609C10.4944 6.941 10.1868 7.32909 9.27887 7.87827C8.26838 8.47138 7.84368 9.1304 7.90958 10.2288L7.91691 10.7267H9.6157V10.3093C9.6157 9.58438 9.88663 9.21094 10.8459 8.64712C11.8417 8.05401 12.3982 7.27051 12.3982 6.15018C12.3982 4.53194 11.0582 3.375 9.05188 3.375C6.87713 3.375 5.68358 4.63445 5.625 6.36986ZM8.84685 14.2195C9.59373 14.2195 10.0624 13.7581 10.0624 13.0552C10.0624 12.3449 9.59373 11.8836 8.84685 11.8836C8.11461 11.8836 7.63133 12.3449 7.63133 13.0552C7.63133 13.7581 8.11461 14.2195 8.84685 14.2195Z" fill="#1D1D1B"></path>\n' +
+    "               </svg>\n" +
+    " </p>\n" +
+    '             </div>\n' +
+    "    </div>\n" +
+    "</div>";
+
+  const popup_template =
+    '<div id="checkout-with-harper-modal" class="popup-overlay harper-popup-wrapper n-animate">\n' +
+    '    <div class="popup-content harper-popup-inner">\n' +
+    "\n" +
+    "\n" +
+    '        <div class="popup-content n-animate">\n' +
+    "\n" +
+    "\n" +
+    "\n" +
+    "\n" +
+    '            <button class="close-harper-modal"></button>\n' +
+    '            <div class="top-section">\n' +
+    '                <div class="top-section-left">\n' +
+    "\n" +
+    "\n" +
+    "                    <h2>" +
+    partner.popup_title +
+    "</h2>\n" +
+    "\n" +
+    '                    <p class="harper-white">' +
+    partner.popup_content +
+    " </b></p>\n" +
+    "\n" +
+    "\n" +
+    '                    <div class="mob-only">\n' +
+    '                        <p class="bold">' +
+    partner.popup_bottom_message +
+    "</p>\n" +
+    "\n" +
+    '                        <a href="#harp-pop-sect-2" class="scroll-link">Scroll</a>\n' +
+    "                    </div>\n" +
+    "\n" +
+    "                </div>\n" +
+    "\n" +
+    "\n" +
+    '                <div class="top-section-right desk-only" style="' +
+    (partner.image_url ? `background: url(${partner.image_url}) no-repeat center center / cover;` : '') +
+    '">\n' +
+    "                </div>\n" +
+    "\n" +
+    "            </div>\n" +
+    "\n" +
+    "\n" +
+    "\n" +
+    "\n" +
+    "\n" +
+    '            <div class="bottom-section" id="harp-pop-sect-2">\n' +
+    "\n" +
+    '                <button class="close-harper-modal mob-only"></button>\n' +
+    "\n" +
+    '                <h3 class="mob-only">How it works</h3>\n' +
+    "\n" +
+    '                <div class="num-section">\n' +
+    '                    <div class="num-row">\n' +
+    '                        <div class="num-num">1.</div>\n' +
+    "\n" +
+    '                        <div class="num-copy">\n' +
+    "                            <h5>" +
+    partner.popup_step_1_title +
+    "</h5>\n" +
+    "                            " +
+    partner.popup_step_1_content +
+    "                        </div>\n" +
+    "                    </div>\n" +
+    "\n" +
+    '                    <div class="num-row">\n' +
+    '                        <div class="num-num">2.</div>\n' +
+    "\n" +
+    "\n" +
+    '                        <div class="num-copy">\n' +
+    "                            <h5>" +
+    partner.popup_step_2_title +
+    "</h5>\n" +
+    "                            " +
+    partner.popup_step_2_content +
+    "                        </div>\n" +
+    "                    </div>\n" +
+    "\n" +
+    '                    <div class="num-row last">\n' +
+    '                        <div class="num-num">3.</div>\n' +
+    "\n" +
+    '                        <div class="num-copy"><h5>' +
+    partner.popup_step_3_title +
+    "</h5>\n" +
+    "                            " +
+    partner.popup_step_3_content +
+    "                        </div>\n" +
+    "                    </div>\n" +
+    "\n" +
+    "                </div>\n" +
+    "\n" +
+    '                <p class="bold desk-only">' +
+    partner.popup_bottom_message +
+    "</p>\n" +
+    "\n" +
+    '                <div class="faq-link"><a href="' +
+    partner.faq_link +
+    '" target="_blank">' + 
+    (partner.faq_text ? partner.faq_text : 'Visit our FAQ page') +
+    '</a></div>\n' +
+    "\n" +
+    "            </div>\n" +
+    "        </div>\n" +
+    "    </div>\n" +
+    "</div>";
+
+  //Error PopUp Template
+  const preorder_template =
+    '<div id="harper-concierge-preorder" class="popup-message" >\n' +
+    '<div id="harper-modal-mask" class="modal-mask">\n' +
+    '<div id="harper-preorder-modal" class="modal-container">\n' +
+    '<div class="preorder-heading">\n' +
+    '<h3 class= "preOrder_title">Try Before You Buy</h3>\n' +
+    "</div>\n" +
+    '<div id="harper-preorder-item" class="harper-item-list"></div>\n' +
+    '<div id="harper-blocked-item" class="harper-item-list"></div>\n' +
+    '<div id= "harper-error-message1" class="harper-message1"></div>\n' +
+    '<div id= "harper-error-message2" class="harper-message2"></div>\n' +
+    "<div>\n" +
+    '<h3 id="harper-preorder-button" class="proceed-btn"></h3>\n' +
+    "</div>\n" +
+    '<div id= "harper-order-brand" class="place-order"></div>\n' +
+    "</div>\n" +
+    "</div>";
+
+  /**
+   * Import CSS
+   * @type {HTMLLinkElement}
+   */
+  importCSS = document.createElement("link");
+  importCSS.href =
+    "https://s3-eu-west-1.amazonaws.com/harper.assets/harper-styles.css";
+  importCSS.rel = "stylesheet";
+  document.head.appendChild(importCSS);
+
+  /**
+   * Insert CwH into page
+   */
+  let insertPostcodeChecker = function() {
+    let element = document.getElementById("checkout-harper");
+    if (element) {
+      if (contentNotInserted === true) {
+        let container = document.createElement("div");
+        let container2 = document.createElement("div");
+        container.innerHTML = popup_template;
+        container2.innerHTML = preorder_template;
+        document.body.appendChild(container);
+        document.body.appendChild(container2);
+      }
+      let mole = '<div id="mole"></div>';
+      element.insertAdjacentHTML("afterend", postcode_checker_template);
+      element.insertAdjacentHTML("afterend", mole);
+
+      addHarperEventHandlers();
+      closeErrorPopUp();
+      document.body.classList.add("harper-inserted");
+      contentNotInserted = false;
+    }
+  };
+
+  let openHarperConciergeModal = function() {
+    let classes = [];
+
+    let override = document.getElementById("harper-modal-override");
+
+    if (!!override) {
+      override.style.display = 'block';
+      override.style.visibility = 'visible';
+      override.style.opacity = 1;
+      let content = override.getElementsByTagName('div')[0];
+      if (!!content) {
+        content.style.display = 'block';
+        content.style.visibility = 'visible';
+        content.style.opacity = 1;
+      }
+      return true;
+    }
+    Array.from(document.getElementsByClassName("popup-content")).forEach(
+      function(element) {
+        classes.push(element);
+      }
+    );
+    Array.from(document.getElementsByClassName("popup-overlay")).forEach(
+      function(element) {
+        classes.push(element);
+      }
+    );
+    Array.from(classes).forEach(function(el) {
+      el.classList.toggle("active");
+    });
+  };
+
+  let closeHarperConciergeModal = function() {
+    let classes = [];
+    let override = document.getElementById("harper-modal-override");
+
+    if (!!override) {
+      override.style.display = 'none';
+      override.style.visibility = 'hidden';
+      override.style.opacity = 0;
+      let content = override.getElementsByTagName('div')[0];
+      if (!!content) {
+        content.style.display = 'none';
+        content.style.visibility = 'hidden';
+        content.style.opacity = 0;
+      }
+      return true;
+    }
+    Array.from(document.getElementsByClassName("popup-content")).forEach(
+      function(element) {
+        classes.push(element);
+      }
+    );
+    Array.from(document.getElementsByClassName("popup-overlay")).forEach(
+      function(element) {
+        classes.push(element);
+      }
+    );
+    Array.from(classes).forEach(function(el) {
+      el.classList.remove("active");
+    });
+  };
+
+  /**
+   * Add event listeners to capture clicks on dynamically inserted content
+   */
+  document.addEventListener("click", function(e) {
+    if (e.target && e.target.id === "harper_try_at_home_button") {
+      showCwH();
+    } else if (e.target && e.target.id === "harper_continue_button") {
+      checkPostcode();
+    } else if (e.target && e.target.id === "harper-preorder-button") {
+      document.getElementById("harper_continue_button").classList.add("hidden");
+      checkProceed();
+    } else if (e.target && e.target.id === "harper-order-brand") {
+      const address1 = window.location.origin + "/checkout";
+      window.location.href = address1;
+    } else if (e.target && e.target.id === "harper-modal-mask") {
+      document.getElementById("harper-preorder-item").innerHTML = "";
+      document.getElementById("harper-blocked-item").innerHTML = "";
+      closeErrorPopUp();
+    }
+  });
+
+  /**
+   * Add keyup listeners to capture Enter event on dynamically inserted content
+   */
+  document.addEventListener("keypress", function(e) {
+    if (e.target && e.target.id === "postcode" && e.keyCode === 13) {
+      e.preventDefault();
+      checkPostcode();
+    }
+  });
+
+  let addHarperEventHandlers = function() {
+    let classes = [];
+
+    Array.from(document.getElementsByClassName("open-harper-modal")).forEach(
+      function(el) {
+        classes.push(el);
+      }
+    );
+
+    Array.from(classes).forEach(function(element) {
+      element.addEventListener("click", openHarperConciergeModal);
+    });
+
+    // Close CwH
+    Array.from(document.getElementsByClassName("Icon--close")).forEach(function(
+      el
+    ) {
+      el.addEventListener("click", showCwH);
+    });
+
+    let close_closes = [];
+
+    Array.from(document.getElementsByClassName("close-harper-modal")).forEach(
+      function(el) {
+        close_closes.push(el);
+      }
+    );
+
+    Array.from(document.getElementsByClassName("harper-popup-wrapper")).forEach(
+      function(el) {
+        close_closes.push(el);
+      }
+    );
+
+    Array.from(close_closes).forEach(function(element) {
+      element.addEventListener("click", closeHarperConciergeModal);
+    });
+  };
+  /**
+   * Continually poll to see if anchir is in place. If it is, add a flag. If both anchor and flag is in place do nothing
+   * If not, will continue to poll continually
+   */
+  let pollForPostcodeChecker = function() {
+    let anchor = document.getElementById("checkout-harper");
+    let mole = document.getElementById("mole");
+    if (anchor && !mole) {
+      insertPostcodeChecker();
+    }
+    setTimeout(pollForPostcodeChecker, 10);
+  };
+
+  pollForPostcodeChecker();
+});
