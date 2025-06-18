@@ -1,0 +1,1273 @@
+if (document.getElementsByClassName("ptw-meta-json").length <= 0) {
+  var ptwShop = typeof Shopify !== "undefined" ? Shopify.shop : ptwShopName;
+
+  var ptwShopDomain = document.domain;
+
+  var ptwBasePath = "https://" + ptwShopDomain + "/a/gwrap/";
+
+  var ptwMoneyFormat = "";
+
+  var ptwHandlerConnecter = "";
+
+  var ptwSettings = "";
+
+  var ptwGiftOptions = "";
+
+  var ptwExtraFields = "";
+
+  var ptwdatapage = "";
+
+  var $ptwobject = "";
+
+  function ptwWrapinRunWithJQuery(ptwLoadMain) {
+    if (typeof jQuery == "undefined") {
+      var ptwHead = document.getElementsByTagName("head")[0];
+
+      var ptwScript = document.createElement("script");
+
+      ptwScript.src = ptwBasePath + "js/lib/jquery-3.4.1.min.js";
+
+      ptwScript.type = "text/javascript";
+
+      ptwScript.onreadystatechange = ptwLoadMain;
+
+      ptwScript.onload = ptwLoadMain;
+
+      // Fire the loading
+      ptwHead.appendChild(ptwScript);
+    } else {
+      ptwLoadMain();
+    }
+  }
+
+  ptwWrapinRunWithJQuery(function ptwLoadMain() {
+    (function ($ptwobject, window, document, undefined) {
+      try{
+        $ptwobject.fn.ptwLoad = function () {
+          $ptwobject('head').append('<link rel="stylesheet" href="'+ptwBasePath +'css/wrapin.css" type="text/css" />');
+          this.ptwHandler();
+        };
+
+        ptwHandlerConnecter = $ptwobject.fn.ptwHandler = function () {
+          ptwdatapage = $ptwobject("#ptw-wrapin").attr("data-page");
+
+          $ptwobject.ajax({
+            type: "GET",
+            url: "/index.json",
+            async: false,
+            dataType: "json",
+            data: {
+              view: "wrapin",
+              q: "ptw_wrapin",
+              _: $ptwobject.now(),
+            },
+            success: function (data) {
+              ptwSettings = data.metafields.settings;
+
+              ptwGiftOptions = data.metafields.gift_options;
+
+              ptwExtraFields = data.metafields.extra_fields;
+
+              ptwMoneyFormat = data.metafields.moneyFormat;
+
+              // Load Gift wrap
+              var ptwWrapHtml = ptwLoadGiftWrap(ptwSettings);
+              var ptwpageName = "";
+              var ptwRule = 0;
+              var ptwdatatag = $ptwobject("#ptw-wrapin").attr("data-tag");
+
+              if (ptwSettings.wrapin_rule == 2 && ptwdatatag != "wrapin") {
+                return false;
+              } else if (
+                ptwSettings.wrapin_rule == 3 &&
+                ptwdatatag == "no-wrapin"
+              ) {
+                return false;
+              }
+
+              if (ptwSettings.page == 3) {
+                ptwpageName = "both";
+              } else if (ptwSettings.page == 2) {
+                ptwpageName = "cart";
+              } else if (ptwSettings.page == 1) {
+                ptwpageName = "product";
+              }
+
+              if (
+                ($ptwobject("#ptw-wrapin").attr("data-page") == ptwpageName ||
+                  ptwSettings.page == 3) &&
+                ptwSettings.status == 1
+              ) {
+                $ptwobject("#ptw-wrapin").html(ptwWrapHtml);
+
+                if ($ptwobject.isFunction(window.ptwAfterWrapinLoadHook)) {
+                  ptwAfterWrapinLoadHook();
+                }
+
+                ptwShowGiftWrapSelected();
+              }
+            },
+          });
+        };
+        //For Normal layout
+        ptwLoadGiftWrap = function () {
+          ptwSetHtml = ptwBuildHtml();
+
+          return ptwSetHtml;
+        };
+
+        ptwBuildHtml = function () {
+          var html = '<div class="ptw-app-wrapper"><div class="ptw-app-desc">';
+          var ptwVariantId = ptwSettings.variant_id;
+          var ptwDefaultCounter = 0;
+          var ptwVariantPrice = ptwSettings.amount;
+          if(ptwSettings.gift_options_status && ptwGiftOptions != "" ){
+            for (const [key, value] of Object.entries(ptwGiftOptions)) {
+              if(ptwDefaultCounter == 0) {
+                ptwVariantId = value.vid;
+                ptwVariantPrice = value.v_price;
+              }
+              ptwDefaultCounter = 1;
+            }
+          }
+          html +=
+            '<input type="hidden" name="ptw-message-config" id="ptw-message-config" value="' +
+            ptwSettings.show_gift_note +
+            '"><input type="hidden" name="ptw-variant-id" id="ptw-variant-id" value="' +
+            ptwVariantId +
+            '"><input type="hidden" name="ptw-price" id="ptw-price" value="' +
+            ptwVariantPrice +
+            '">';
+
+          html += '<div class="ptw-app-label">';
+          if (
+            (ptwSettings.app_layout == 1 && ptwdatapage == "product") ||
+            (ptwSettings.app_layout == 2 && ptwdatapage == "product") ||
+            (ptwSettings.app_layout == 1 && ptwdatapage == "cart")
+          ) {
+            html +=
+              '<input type="checkbox" name="ptw-gift-needed" id="ptw-gift-needed">';
+          }
+          html += '<label for="ptw-gift-needed">';
+          if (ptwSettings.description != "") {
+            var ptwDescription = ptwloadLanguage(ptwSettings,"description");
+            html += ptwDescription;
+          }
+
+          if (ptwSettings.hide_gift_price == 0) {
+            html +=
+              '<span class="ptw-price money" data-amount="' +
+              ptwVariantPrice +
+              '">( ' +
+              ptwFormatMoney(ptwVariantPrice) +
+              " )</span>";
+          }
+
+          html += "</label></div>";
+
+          html += "</div>";
+
+          html += ptwBuildOptionsHtml();
+
+          html += ptwBuildExtrafields();
+
+          html += '<div class="ptw-app-gnote">';
+
+          if (ptwSettings.show_image == 1) {
+            html +=
+              '<img class="ptw-gift-image" src="' +
+              ptwSettings.image +
+              '" alt="ptw-gift-image" />';
+          }
+          //to add product name
+          if (ptwdatapage == "product") {
+            var ptwProdutName =
+              $ptwobject("#ptw-wrapin").attr("data-productname");
+            html +=
+              '<input type="hidden" name="ptw-productname" id="ptw-productname" value="' +
+              ptwProdutName +
+              '">';
+          }
+          if (
+            ptwSettings.app_layout == 2 &&
+            ptwdatapage == "cart" &&
+            ptwSettings.show_gift_note == 1
+          ) {
+            html += '<div class="ptw-message-note">';
+          } else {
+            html += '<div class="ptw-message-note" style="display:none;">';
+          }
+          var ptwPlaceholder = ptwloadLanguage(ptwSettings,"placeholder");
+          html +=
+            '<textarea name="attributes[gift-message-note]" id="ptw-text-message" class="form-control" placeholder="' +
+            ptwPlaceholder +
+            '"></textarea>';
+
+          html += '<div class="ptw-message-limit"></div>';
+
+          html += "</div>";
+
+          if (ptwSettings.app_layout == 2 && ptwdatapage == "cart") {
+            var ptwAddgiftButton = ptwloadLanguage(ptwSettings,"gift_wrap_btn_label");
+            
+            html +=
+              '<div class="ptw-add-gift"><button id="ptw-add-gift-pro" class="button btn">'+ptwAddgiftButton+'</button></div>';
+          }
+
+          html += '<div id="ptw-error-message" style="display:none;"></div>';
+
+          html += "</div>";
+
+          return html;
+        };
+
+        $ptwobject(document).on("click", "#ptw-add-gift-pro", function () {
+          var ptwMessageEnable = $ptwobject("#ptw-message-config").val();
+
+          var $errorMessage = $ptwobject("#ptw-error-message");
+
+          var $noteCharLimit = ptwSettings.msg_char_limit;
+
+          var $giftNoteRequired = ptwSettings.gift_note_required;
+
+          var $addProdProps = ptwSettings.gift_note_prod_prop;
+
+          console.log("checkout clicked");
+
+          var ptwVariantId = $ptwobject("#ptw-variant-id").val();
+
+          var ptwShopLocale = Shopify.locale;
+
+          var ptw_gift_note = $ptwobject("#ptw-text-message").val();
+
+          var ptwMessageError = ptwloadLanguage(ptwSettings,"gift_error_msg");
+
+          if (
+            ptw_gift_note == "" &&
+            ptwMessageEnable == 1 &&
+            $giftNoteRequired == 1
+          ) {
+            $errorMessage.html(ptwMessageError);
+
+            $errorMessage.show();
+
+            return false;
+          } else if (
+            ptw_gift_note.length > $noteCharLimit &&
+            $giftNoteRequired == 1
+          ) {
+            $errorMessage.html(
+              "Please enter short message because more than " +
+                $noteCharLimit +
+                " character are not allowed."
+            );
+
+            $errorMessage.show();
+
+            return false;
+          } else {
+            var ptwRandomVar = Math.floor(Math.random() * 10000 + 1);
+
+            // Extra Field Validations
+
+            if ($ptwobject("#ptw-wrapin input[name^='attributes']").length) {
+              var $show_error = 0;
+
+              $ptwobject(".ptw-extra-field-error").remove();
+
+              $ptwobject('#ptw-wrapin input[name^="attributes"]').each(function (
+                i
+              ) {
+                var attr_value = $ptwobject(this).val();
+
+                if (attr_value == "") {
+                  $ptwobject(this)
+                    .parent(".ptw-extra-field")
+                    .append(
+                      '<div class="ptw-extra-field-error">This field is required</div>'
+                    );
+
+                  $show_error = 1;
+                } else if (
+                  $ptwobject(this).attr("id") == "ptw-field-email" &&
+                  ptwValidateEmail(attr_value) == false
+                ) {
+                  $ptwobject(this)
+                    .parent(".ptw-extra-field")
+                    .append(
+                      '<div class="ptw-extra-field-error">Please add valid Email address</div>'
+                    );
+
+                  $show_error = 1;
+                } else if (
+                  $ptwobject(this).attr("id") == "ptw-field-phone" &&
+                  ptwValidatePhone(attr_value) == false
+                ) {
+                  $ptwobject(this)
+                    .parent(".ptw-extra-field")
+                    .append(
+                      '<div class="ptw-extra-field-error">Please add valid Phone Number</div>'
+                    );
+
+                  $show_error = 1;
+                }
+              });
+
+              if ($show_error == 1) {
+                return false;
+              }
+            }
+
+            if ($addProdProps == 1) {
+              var ptwProdProp = {
+                items: [
+                  {
+                    quantity: 1,
+                    id: ptwVariantId,
+                    properties: { "Gift Wrap Note": ptw_gift_note },
+                  },
+                ],
+              };
+            } else {
+              var ptwProdProp = { items: [{ quantity: 1, id: ptwVariantId }] };
+            }
+
+            var product_params = {
+              type: "POST",
+
+              url: "/cart/add.js",
+
+              data: ptwProdProp,
+
+              dataType: "json",
+
+              cache: false,
+
+              async: false,
+            };
+
+            if ($ptwobject.isFunction(window.ptwBeforGiftAddHook)) {
+              ptwBeforGiftAddHook();
+            }
+
+            $ptwobject.ajax(product_params).done(function (data) {
+              console.log("Gift Wrap Added");
+
+              // Add Gift wrap After Hook
+
+              if ($ptwobject.isFunction(window.ptwAfterGiftAddHook)) {
+                setTimeout(ptwAfterGiftAddHook, 1000);
+              }
+            });
+
+            var ptw_cart_attributes = "";
+
+            if (ptwExtraFields) {
+              $ptwobject('#ptw-wrapin input[name^="attributes"]').each(function (
+                i
+              ) {
+                var attr_name = $ptwjobject(this).attr("name");
+
+                var attr_value = $ptwjobject(this).val();
+
+                ptw_cart_attributes += "&" + attr_name + "=" + attr_value;
+              });
+            }
+
+            if (ptw_cart_attributes != "") {
+              // If Extra field exists
+
+              var params =
+                "attributes[gift-message-note]=" +
+                ptw_gift_note +
+                ptw_cart_attributes;
+
+              $ptwobject.post("/cart/update.js", params).always(function () {
+                window.location.href = "/checkout?locale=" + ptwShopLocale;
+              });
+            } else {
+              // Post only notes
+
+              var notes_params = {
+                type: "POST",
+
+                url: "/cart/update.js?id=" + ptwRandomVar,
+
+                data: "attributes[gift-message-note]=" + ptw_gift_note,
+
+                dataType: "json",
+
+                cache: false,
+
+                async: false,
+              };
+
+              $ptwobject.ajax(notes_params).always(function () {
+                var getcart_params = { dataType: "json" };
+
+                // Insert note if it is missing in cart
+
+                $ptwobject.ajax("/cart.js", getcart_params).done(function (data) {
+                  if (
+                    JSON.stringify(data.attributes) == "{}" &&
+                    ptw_gift_note != ""
+                  ) {
+                    $ptwobject.ajax(notes_params);
+                  }
+                });
+
+                if ($ptwobject.isFunction(window.ptwAfterNotesHook)) {
+                  setTimeout(ptwAfterNotesHook, 1000);
+                }
+
+                window.location = "/cart?refresh";
+              });
+            }
+
+            return true;
+          }
+        });
+
+        ptwBuildOptionsHtml = function () {
+          var html = "";
+          var ptwDefaultchecked = "";
+          var ptwDefaultCount = 0;
+          if (ptwGiftOptions != "" && ptwSettings.gift_options_status) {          
+            if (ptwSettings.gift_options_layout == 1) {
+              if (ptwSettings.app_layout == 2 && ptwdatapage == "cart") {
+                html +=
+                  '<div class="ptw-gift-options" style="display:block"><select id="ptw-gift-options-sb">';
+              } else {
+                html +=
+                  '<div class="ptw-gift-options"><select id="ptw-gift-options-sb">';
+              }
+
+              for (const [key, value] of Object.entries(ptwGiftOptions)) {
+                var ptwOptionTitle = ptwloadLanguage(ptwSettings,"gift_option_title",key);
+                var ptwOptionDescription = ptwloadLanguage(ptwSettings,"gift_option_description",key);
+                html +=
+                  '<option value="' +
+                  value.vid +
+                  '" data-gwimg="' +
+                  value.v_img +
+                  '" data-gwprice="' +
+                  value.v_price +
+                  '" data-gwdesc="' +
+                  ptwOptionDescription +
+                  '">' +
+                  ptwOptionTitle +
+                  "</option>";
+              }
+
+              html += "</select></div>";
+            } else if (ptwSettings.gift_options_layout == 2) {
+              if (ptwSettings.app_layout == 2 && ptwdatapage == "cart") {
+                  html +='<div class="ptw-gift-options" style="display:block">';
+              } else {
+                  html += '<div class="ptw-gift-options">';
+              }
+
+              for (const [key, value] of Object.entries(ptwGiftOptions)) {
+                var ptwOptionTitle = ptwloadLanguage(ptwSettings,"gift_option_title",key);
+                var ptwOptionDescription = ptwloadLanguage(ptwSettings,"gift_option_description",key);
+                if (ptwDefaultCount == 0) {
+                  ptwDefaultchecked = 'checked="checked"';
+                } else {
+                  ptwDefaultchecked = ' ';
+                }
+                html +=
+                  '<label><input type="radio" class="ptw-gift-options-sb" name="ptw-gift-options-sb" value="' +
+                  value.vid +
+                  '" data-gwimg="' +
+                  value.v_img +
+                  '" data-gwprice="' +
+                  value.v_price +
+                  '" data-gwdesc="' +
+                  ptwOptionDescription +
+                  '"' + 
+                  ptwDefaultchecked + 
+                  '>' +
+                  ptwOptionTitle +
+                  "</label>";
+                  ptwDefaultCount = 1;
+              }
+
+              html += "</div>";
+            } else if (ptwSettings.gift_options_layout == 3) {
+              if (ptwSettings.app_layout == 2 && ptwdatapage == "cart") {
+                  html +='<div class="ptw-gift-options" style="display:block">';
+              } else {
+                  html += '<div class="ptw-gift-options">';
+              }
+
+              for (const [key, value] of Object.entries(ptwGiftOptions)) {
+                var ptwOptionDescription = ptwloadLanguage(ptwSettings,"gift_option_description",key);
+                var defaultImage = ptwBasePath +'images/default/wrap_a_gift.png';
+                var optionImg = (value.v_img ? value.v_img : defaultImage);
+                if (ptwDefaultCount == 0) {
+                  ptwDefaultchecked = 'selected';
+                } else {
+                  ptwDefaultchecked = ' ';
+                }
+                html +=
+                  ' <label class="ptw-gift-options-img '+ ptwDefaultchecked +'" value="' +
+                  value.vid +
+                  '" data-gwimg="' +
+                  optionImg +
+                  '" data-gwprice="' +
+                  value.v_price +
+                  '" data-gwdesc="' +
+                  ptwOptionDescription +
+                  '"><img src="' +
+                  optionImg +
+                  '" /></label>';
+                ptwDefaultCount = 1;
+              }
+
+              html += "</div>";
+            }
+          }
+
+          return html;
+        };
+
+        ptwBuildExtrafields = function () {
+          var html = "";
+
+          if (ptwExtraFields && Object.keys(ptwExtraFields).length > 0) {
+            if (ptwExtraFields.from_field == 1) {
+              html += '<div class="ptw-from-field ptw-extra-field">';
+
+              html += "<label>" + ptwExtraFields.from_label + "</label>";
+
+              html +=
+                '<input name="attributes[gift-from]" id="ptw-field-from" class="form-control" placeholder="' +
+                ptwExtraFields.from_placeholder +
+                '" />';
+
+              html += "</div>";
+            }
+
+            if (ptwExtraFields.to_field == 1) {
+              html += '<div class="ptw-from-field ptw-extra-field">';
+
+              html += "<label>" + ptwExtraFields.to_label + "</label>";
+
+              html +=
+                '<input name="attributes[gift-to]" id="ptw-field-to" class="form-control" placeholder="' +
+                ptwExtraFields.to_placeholder +
+                '" />';
+
+              html += "</div>";
+            }
+
+            if (ptwExtraFields.email_field == 1) {
+              html += '<div class="ptw-from-field ptw-extra-field">';
+
+              html += "<label>" + ptwExtraFields.email_label + "</label>";
+
+              html +=
+                '<input name="attributes[gift-email]" id="ptw-field-email" class="form-control" placeholder="' +
+                ptwExtraFields.email_placeholder +
+                '" />';
+
+              html += "</div>";
+            }
+
+            if (ptwExtraFields.phone_field == 1) {
+              html += '<div class="ptw-from-field ptw-extra-field">';
+
+              html += "<label>" + ptwExtraFields.phone_label + "</label>";
+
+              html +=
+                '<input name="attributes[gift-phone]" id="ptw-field-phone" class="form-control" placeholder="' +
+                ptwExtraFields.phone_placeholder +
+                '" />';
+
+              html += "</div>";
+            }
+          }
+
+          return html;
+        };
+
+        ptwFormatMoney = function (amount) {
+          var ptwFormattedAmount = ptwMoneyFormat
+            .replace("{{amount}}", amount)
+            .replace("{{amount_no_decimals}}", amount)
+            .replace("{{amount_with_comma_separator}}", amount)
+            .replace("{{amount_no_decimals_with_comma_separator}}", amount)
+            .replace("{{amount_with_apostrophe_separator}}", amount);
+          return ptwFormattedAmount;
+        };
+
+        ptwShowGiftWrapSelected = function () {
+          var ptwPage = $ptwobject("#ptw-wrapin").attr("data-page");
+
+          // Update box if there is a value
+
+          if (ptwPage == "cart") {
+            $ptwobject
+              .getJSON("/cart.js")
+
+              .done(function (response) {
+                var ptwCartAttrbutes = response.attributes;
+                var ptwCartItems = response.items;
+                var ptwFlag = 0;
+
+                // empty cart attributes if product not available & show options selected
+                $ptwobject.each(ptwCartItems, function (index, item) {
+                  if (item.product_type == "wrapin") {
+                    ptwFlag = 1;
+                  }
+                  if (item.product_type == "wrapin") {
+                    if (ptwSettings.gift_options_layout == 1) {
+                      $ptwobject(".ptw-gift-options select")
+                        .find("[value='" + item.variant_id + "']")
+                        .attr("selected", "selected");
+                    }
+
+                    if (ptwSettings.gift_options_layout == 2) {
+                      $ptwobject(".ptw-gift-options")
+                        .find("[value='" + item.variant_id + "']")
+                        .prop("checked", true);
+                    }
+
+                    if (ptwSettings.gift_options_layout == 3) {
+                      $ptwobject(".ptw-gift-options")
+                        .find("[value='" + item.variant_id + "']")
+                        .addClass("selected");
+                    }
+                  }
+                });
+
+                // Remove message if product wrapin not available.
+                if (ptwFlag == 0) {
+                  $ptwobject.post(
+                    "/cart/update.js",
+                    "attributes[gift-message-note]"
+                  );
+                }
+                // To show cart wrapin Message
+                $ptwobject.each(ptwCartAttrbutes, function (index, value) {
+                  if (ptwFlag) {
+                    if (index == "gift-message-note" && value != "") {
+                      $ptwobject("#ptw-gift-needed").prop("checked", true);
+
+                      if ($ptwobject("#ptw-message-config").val() == 1) {
+                        $ptwobject(".ptw-message-note").show();
+                      }
+
+                      $ptwobject("#ptw-text-message").val(value);
+
+                      if ($ptwobject(".ptw-gift-options").length) {
+                        setTimeout(function () {
+                          $ptwobject(".ptw-gift-options").fadeIn();
+                        }, 200);
+                      }
+                    }
+                  }
+                });
+              })
+
+              .fail(function (jqxhr, textStatus, error) {
+                var err = textStatus + ", " + error;
+
+                console.log("Request Failed: " + err);
+              });
+          }
+        };
+
+        // Select the Gift wrap Option based on user selection
+
+        ptwSelectGiftOptions = function (
+          ptwOptionImg,
+          ptwOptionDesc,
+          ptwOptionPrice,
+          ptwOptionId) {
+          if (ptwOptionImg != "") {
+            if (
+              ptwSettings.gift_options_status == 1 &&
+              ptwSettings.gift_options_imgs == 1
+            ) {
+              $ptwobject(".ptw-gift-image").attr("src", ptwOptionImg);
+            }
+          }
+
+          if (ptwOptionDesc != "") {
+            $ptwobject(".ptw-option-desc").html("src", ptwOptionDesc);
+          }
+
+          if (ptwOptionId != "") {
+            $ptwobject("#ptw-variant-id").val(ptwOptionId);
+          }
+
+          if (ptwOptionPrice != "") {
+            var ptwOptionPrice = ptwFormatMoney(ptwOptionPrice);
+            $ptwobject("#ptw-wrapin .ptw-price").html(
+              " ( " + ptwOptionPrice + " )"
+            );
+          }
+        };
+
+        // Show message on checkbox checked
+
+        $ptwobject(document).on("click", "#ptw-gift-needed", function () {        
+          var ptwMessageEnable = $ptwobject("#ptw-message-config").val();
+
+          if (ptwMessageEnable == 1) {
+            if ($ptwobject(this).is(":checked")) {
+              $ptwobject(".ptw-app-wrapper .ptw-message-note").fadeIn();
+            } else {
+              $ptwobject(".ptw-app-wrapper .ptw-message-note").fadeOut();
+            }
+          }
+
+          //For show/hide Gift options
+          if ($ptwobject(this).is(":checked")) {
+            if (ptwSettings.gift_options_status == 1) {
+              $ptwobject(".ptw-app-wrapper .ptw-gift-options").fadeIn();
+            }
+          } else {
+            $ptwobject(".ptw-app-wrapper .ptw-gift-options").fadeOut();
+          }
+        });
+
+        // Select Gift Wrap Option - Selectbox
+
+        $ptwobject(document).on(
+          "change",
+          "#ptw-wrapin #ptw-gift-options-sb",
+          function () {
+            var ptwOptionImg = $ptwobject(this)
+              .find(":selected")
+              .attr("data-gwimg");
+
+            var ptwOptionDesc = $ptwobject(this)
+              .find(":selected")
+              .attr("data-gwdesc");
+
+            var ptwOptionPrice = $ptwobject(this)
+              .find(":selected")
+              .attr("data-gwprice");
+
+            var ptwOptionId = $ptwobject(this).find(":selected").val();
+
+            ptwSelectGiftOptions(
+              ptwOptionImg,
+              ptwOptionDesc,
+              ptwOptionPrice,
+              ptwOptionId
+            );
+          }
+        );
+
+        // Select Gift Wrap Option - Radio Buttons
+
+        $ptwobject(document).on(
+          "click",
+          "#ptw-wrapin input[type=radio][name=ptw-gift-options-sb]",
+          function () {
+            var ptwOptionImg = $ptwobject(this).attr("data-gwimg");
+
+            var ptwOptionDesc = $ptwobject(this).attr("data-gwdesc");
+
+            var ptwOptionPrice = $ptwobject(this).attr("data-gwprice");
+
+            var ptwOptionId = $ptwobject(this).val();
+
+            ptwSelectGiftOptions(
+              ptwOptionImg,
+              ptwOptionDesc,
+              ptwOptionPrice,
+              ptwOptionId
+            );
+          }
+        );
+
+        // Select Gift Wrap Option - Image selection
+
+        $ptwobject(document).on("click", ".ptw-gift-options-img", function () {
+          $ptwobject(".ptw-gift-options-img").removeClass("selected");
+
+          $ptwobject(this).addClass("selected");
+
+          var ptwOptionImg = $ptwobject(this).attr("data-gwimg");
+
+          var ptwOptionDesc = $ptwobject(this).attr("data-gwdesc");
+
+          var ptwOptionPrice = $ptwobject(this).attr("data-gwprice");
+
+          var ptwOptionId = $ptwobject(this).attr("value");
+
+          ptwSelectGiftOptions(
+            ptwOptionImg,
+            ptwOptionDesc,
+            ptwOptionPrice,
+            ptwOptionId
+          );
+        });
+
+        // Show remaining characters for message
+
+        $ptwobject(document).on("keyup", "#ptw-text-message", function () {
+          var showCharCount = ptwSettings.msg_char_count;
+          if (showCharCount != 0) {
+            var ptwMsgLength = $ptwobject(this).val().length;
+            var noteCharLimit = ptwSettings.msg_char_limit;
+            var errorMessage = $ptwobject("#ptw-error-message");
+
+            if (ptwMsgLength > noteCharLimit) {
+              errorMessage.html(
+                "Please enter short message because more than " +
+                  noteCharLimit +
+                  " characters are not allowed."
+              );
+
+              $ptwobject(".ptw-message-limit").hide();
+
+              errorMessage.fadeIn();
+            } else {
+              var ptwRemainingChar = noteCharLimit - ptwMsgLength;
+
+              $ptwobject(".ptw-message-limit").show();
+              var ptwCharLeftText = ptwRemainingChar + " character(s) left";
+              if ($ptwobject.isFunction(window.ptwChangeCharTextHook)) {
+                ptwCharLeftText = ptwChangeCharTextHook(ptwRemainingChar);
+              }
+              $ptwobject(".ptw-message-limit").text(ptwCharLeftText);
+
+              $ptwobject("#ptw-error-message").fadeOut();
+            }
+          }
+        });
+
+        $ptwobject(document).on(
+          "click",
+          "input[name=checkout], button[name=checkout], .ptwCustomCheckout",
+          function (e) {
+            console.log("checkout button clicked");
+
+            var ptwVariantId = $ptwobject("#ptw-variant-id").val();
+
+            var ptwMessageEnable = $ptwobject("#ptw-message-config").val();
+
+            var errorMessage = $ptwobject("#ptw-error-message");
+
+            var ptwShopLocale = Shopify.locale;
+
+            var noteCharLimit = ptwSettings.msg_char_limit;
+
+            var addProdProps = ptwSettings.gift_note_prod_prop;
+
+            var giftNoteRequired = ptwSettings.gift_note_required;
+
+            var ptwMessageError = ptwloadLanguage(ptwSettings,"gift_error_msg");
+
+            if ($ptwobject.isFunction(window.ptwFieldValidateAddHook)) {
+              ptwFieldValidateAddHook(e);
+            }
+
+            if ($ptwobject("#ptw-gift-needed").is(":checked")) {
+              var ptw_gift_note = $ptwobject("#ptw-text-message").val();
+
+              if (
+                ptw_gift_note == "" &&
+                ptwMessageEnable == 1 &&
+                giftNoteRequired == 1
+              ) {
+                errorMessage.html(ptwMessageError);
+
+                errorMessage.show();
+
+                return false;
+              } else if (
+                ptw_gift_note.length > noteCharLimit &&
+                giftNoteRequired == 1
+              ) {
+                errorMessage.html(
+                  "Please enter short message because more than " +
+                    noteCharLimit +
+                    " character are not allowed."
+                );
+
+                errorMessage.show();
+
+                return false;
+              } else {
+                var ptwRandomVar = Math.floor(Math.random() * 10000 + 1);
+
+                // Extra Field Validations
+
+                if ($ptwobject("#ptw-wrapin input[name^='attributes']").length) {
+                  var $show_error = 0;
+
+                  $ptwobject(".ptw-extra-field-error").remove();
+
+                  $ptwobject('#ptw-wrapin input[name^="attributes"]').each(
+                    function (i) {
+                      var attr_value = $ptwobject(this).val();
+
+                      if (attr_value == "") {
+                        $ptwobject(this)
+                          .parent(".ptw-extra-field")
+                          .append(
+                            '<div class="ptw-extra-field-error">This field is required</div>'
+                          );
+
+                        $show_error = 1;
+                      } else if (
+                        $ptwobject(this).attr("id") == "ptw-field-email" &&
+                        ptwValidateEmail(attr_value) == false
+                      ) {
+                        $ptwobject(this)
+                          .parent(".ptw-extra-field")
+                          .append(
+                            '<div class="ptw-extra-field-error">Please add valid Email address</div>'
+                          );
+
+                        $show_error = 1;
+                      } else if (
+                        $ptwobject(this).attr("id") == "ptw-field-phone" &&
+                        ptwValidatePhone(attr_value) == false
+                      ) {
+                        $ptwobject(this)
+                          .parent(".ptw-extra-field")
+                          .append(
+                            '<div class="ptw-extra-field-error">Please add valid Phone Number</div>'
+                          );
+
+                        $show_error = 1;
+                      }
+                    }
+                  );
+
+                  if ($show_error == 1) {
+                    return false;
+                  }
+                }
+
+                if (addProdProps == 1) {
+                  var ptwProdProp = {
+                    items: [
+                      {
+                        quantity: 1,
+                        id: ptwVariantId,
+                        properties: { "Gift Message": ptw_gift_note },
+                      },
+                    ],
+                  };
+                } else {
+                  var ptwProdProp = {
+                    items: [{ quantity: 1, id: ptwVariantId }],
+                  };
+                }
+
+                if ($ptwobject.isFunction(window.ptwModifyParamHook)) {
+                  ptwProdProp = ptwModifyParamHook(ptwProdProp);
+                }
+
+                var product_params = {
+                  type: "POST",
+
+                  url: "/cart/add.js",
+
+                  data: ptwProdProp,
+
+                  dataType: "json",
+
+                  cache: false,
+
+                  async: false,
+                };
+
+                if ($ptwobject.isFunction(window.ptwBeforGiftAddHook)) {
+                  ptwBeforGiftAddHook();
+                }
+
+                $ptwobject.ajax(product_params).done(function (data) {
+                  console.log("Gift Wrap Added");
+                  $ptwobject("#ptw-gift-needed").trigger("click");
+                  // Add Gift wrap After Hook
+
+                  if ($ptwobject.isFunction(window.ptwAfterGiftAddHook)) {
+                    setTimeout(ptwAfterGiftAddHook, 1000);
+                  }
+                });
+
+                var ptw_cart_attributes = "";
+
+                if (1 == 0) {
+                  // Advance Settings ( DISABLED NOW )
+
+                  $ptwobject('#ptw-wrapin input[name^="attributes"]').each(
+                    function (i) {
+                      var attr_name = $ptwobject(this).attr("name");
+
+                      var attr_value = $ptwobject(this).val();
+
+                      ptw_cart_attributes += "&" + attr_name + "=" + attr_value;
+                    }
+                  );
+                }
+
+                if (ptw_cart_attributes != "") {
+                  // If Extra field exists
+
+                  var params =
+                    "attributes[gift-message-note]=" +
+                    ptw_gift_note +
+                    ptw_cart_attributes;
+
+                  $ptwobject.post("/cart/update.js", params).always(function () {
+                    window.location.href = "/checkout?locale=" + ptwShopLocale;
+                  });
+                } else {
+                  // Post only notes
+
+                  var notes_params = {
+                    type: "POST",
+
+                    url: "/cart/update.js?id=" + ptwRandomVar,
+
+                    data: "attributes[gift-message-note]=" + ptw_gift_note,
+
+                    dataType: "json",
+
+                    cache: false,
+
+                    async: false,
+                  };
+
+                  $ptwobject.ajax(notes_params).always(function () {
+                    var getcart_params = { dataType: "json" };
+
+                    // Insert note if it is missing in cart
+
+                    $ptwobject
+                      .ajax("/cart.js", getcart_params)
+                      .done(function (data) {
+                        if (
+                          JSON.stringify(data.attributes) == "{}" &&
+                          ptw_gift_note != ""
+                        ) {
+                          $ptwobject.ajax(notes_params);
+                        }
+                      });
+
+                    if ($ptwobject.isFunction(window.ptwAfterNotesHook)) {
+                      setTimeout(ptwAfterNotesHook, 1000);
+                    }
+                  });
+                }
+
+                return true;
+              }
+            } else {
+              /* Do Nothing */
+
+              return true;
+            }
+          }
+        );
+
+        $ptwobject(document).on(
+          "click",
+          "button[name=add], .ptwAddToCart",
+          function (e) {
+            var ptwVariantId = $ptwobject("#ptw-variant-id").val();
+
+            var ptwMessageEnable = $ptwobject("#ptw-message-config").val();
+
+            var ptwMessageNeeded = $ptwobject("#ptw-gift-needed");
+
+            var errorMessage = $ptwobject("#ptw-error-message");
+
+            var noteCharLimit = ptwSettings.msg_char_limit;
+
+            var giftNoteRequired = ptwSettings.gift_note_required;
+
+            if ($ptwobject("#ptw-gift-needed").is(":checked")) {
+              var ptw_gift_note = $ptwobject("#ptw-text-message").val();
+
+              if (
+                typeof ptw_gift_note != "undefined" &&
+                ptw_gift_note == "" &&
+                ptwMessageEnable == 1 &&
+                giftNoteRequired == 1
+              ) {
+                var ptwMessageError = ptwloadLanguage(ptwSettings,"gift_error_msg");
+
+                if ($ptwobject.isFunction(window.ptwModifyMessageError)) {
+                  ptwMessageError = ptwModifyMessageError(ptwMessageError);
+                }
+
+                errorMessage.html(ptwMessageError);
+
+                errorMessage.show();
+
+                return false;
+              } else if (
+                typeof ptw_gift_note != "undefined" &&
+                ptw_gift_note.length > noteCharLimit
+              ) {
+                errorMessage.html(
+                  "Please enter short message because more than " +
+                    noteCharLimit +
+                    " characters are not allowed."
+                );
+
+                errorMessage.show();
+
+                return false;
+              } else {
+                var ptwProdName = $ptwobject("#ptw-productname").val();
+
+                if (typeof ptw_gift_note != "undefined" && ptw_gift_note != "") {
+                  var ptwProductProps = {
+                    "Gift Note": ptw_gift_note,
+                    "Product Name": ptwProdName,
+                  };
+                } else {
+                  var ptwProductProps = { "Product Name": ptwProdName };
+                }
+
+                if ($ptwobject.isFunction(window.ptwModifyParamHook)) {
+                  ptwProductProps = ptwModifyParamHook(ptwProductProps);
+                }
+
+                var ptwProductParams = {
+                  type: "POST",
+
+                  url: "/cart/add.js",
+
+                  data: {
+                    items: [
+                      {
+                        quantity: 1,
+                        id: ptwVariantId,
+                        properties: ptwProductProps,
+                      },
+                    ],
+                  },
+
+                  dataType: "json",
+
+                  cache: false,
+
+                  async: false,
+                };
+
+                if ($ptwobject.isFunction(window.ptwBeforGiftAddProdHook)) {
+                  ptwBeforGiftAddProdHook();
+                }
+
+                $ptwobject.ajax(ptwProductParams).done(function (data) {
+                  console.log("Gift Wrap Added");
+                  $ptwobject("#ptw-gift-needed").trigger("click");
+
+                  if ($ptwobject.isFunction(window.ptwAfterGiftAddProdHook)) {
+                    setTimeout(ptwAfterGiftAddProdHook);
+                  }
+                });
+
+                if (ptwMessageEnable != 1) {
+                  $ptwobject("#ptw-text-message").remove();
+                }
+              }
+            } else if (ptwMessageNeeded.prop("checked", false)) {
+              $ptwobject("#ptw-text-message").remove();
+            } else {
+              $ptwobject("#ptw-text-message").remove();
+            }
+          }
+        );
+
+        //For Language translation
+        ptwloadLanguage = function(ptwSettings,ptwNeededParam,ptwOptId){
+          var ptwLanguage = $ptwobject('html').attr('lang');
+          var ptwLanguageData = {};
+          var ptwLanguageSettings = ptwSettings.language;
+          var ptwOpId = ptwOptId;
+          
+          if(!ptwLanguage || ptwLanguage == ''){
+              ptwLanguage = $ptwobject('#ptwLang').attr('lang');
+          }
+          //Checking if language has been created
+          if(!ptwLanguageSettings || ptwLanguageSettings.length === 0){ //when no language created          
+              ptwLanguageData['description'] = ptwSettings.description? ptwSettings.description:"Add Gift Wrap to your Order";
+              ptwLanguageData['placeholder'] = ptwSettings.placeholder? ptwSettings.placeholder:"AK Gift Message";
+              ptwLanguageData['gift_wrap_btn_label'] = ptwSettings.gift_wrap_btn_label? ptwSettings.gift_wrap_btn_label:"AK Gift Message";
+              ptwLanguageData['gift_error_msg'] = ptwSettings.gift_error_msg? ptwSettings.gift_error_msg:"Please Enter Gift Message Note";
+            
+              //For Gift options translation
+              $ptwobject.each(ptwGiftOptions, function(ptwGiftIndex, ptwGiftVal) {
+                 if(ptwOptId != '' && ptwGiftIndex == ptwOptId){
+                    ptwLanguageData['gift_option_description'] = ptwGiftVal.v_desc;
+                    ptwLanguageData['gift_option_title'] = ptwGiftVal.v_title;
+                    //return false;
+                 }
+              });
+            //return false;
+          }else{
+              $ptwobject.each(ptwLanguageSettings, function(ptwLangIndex, ptwLangVal) {              
+                    if(ptwLangIndex == ptwLanguage){
+                       ptwLanguageData['description'] = ptwLangVal.general.description? ptwLangVal.general.description: ptwSettings.general.description;
+                       ptwLanguageData['placeholder'] = ptwLangVal.general.placeholder? ptwLangVal.general.placeholder: ptwSettings.general.placeholder;
+                       ptwLanguageData['gift_wrap_btn_label'] = ptwLangVal.general.gift_wrap_btn_label? ptwLangVal.general.gift_wrap_btn_label:ptwSettings.gift_wrap_btn_label;
+                       ptwLanguageData['gift_error_msg'] = ptwLangVal.general.gift_error_msg? ptwLangVal.general.gift_error_msg:ptwSettings.gift_error_msg;
+                      
+                      //For Gift options translation
+                      $ptwobject.each(ptwLangVal.giftoption, function(ptwGiftIndex, ptwGiftVal) {
+                        if(ptwOptId != '' && ptwGiftIndex == ptwOptId){
+                          ptwLanguageData['gift_option_description'] = ptwGiftVal.gift_option_description;
+                          ptwLanguageData['gift_option_title'] = ptwGiftVal.gift_option_title;
+                          return false;
+                        }
+                      });
+
+                      return false;
+                    }else{
+                      ptwLanguageData['description'] = ptwSettings.description? ptwSettings.description:"Add Gift Wrap to your Order";
+                      ptwLanguageData['placeholder'] = ptwSettings.placeholder? ptwSettings.placeholder:"AK Gift Message";
+                      ptwLanguageData['gift_wrap_btn_label'] = ptwSettings.gift_wrap_btn_label? ptwSettings.gift_wrap_btn_label:"AK Gift Message";
+                      ptwLanguageData['gift_error_msg'] = ptwSettings.gift_error_msg? ptwSettings.gift_error_msg:"Please Enter Gift Message Note";
+                      
+                      //For Gift options translation
+                      $ptwobject.each(ptwGiftOptions, function(ptwGiftIndex, ptwGiftVal) {
+                        if(ptwOptId != '' && ptwGiftIndex == ptwOpId){
+                          ptwLanguageData['gift_option_description'] = ptwGiftVal.v_desc;
+                          ptwLanguageData['gift_option_title'] = ptwGiftVal.v_title;
+                          return false;
+                        }
+                      });
+                      // return false;
+                    }
+              });
+          }
+          
+          //used when we need whole translation array
+          if(ptwNeededParam == "current_language"){
+            return ptwLanguageData;
+          }
+          return ptwLanguageData[ptwNeededParam];
+        };
+        // Call function
+
+        $ptwobject("div").ptwLoad();
+      } catch(e) {
+          var line_number = e?.stack;
+          if(line_number == '' || line_number == undefined){
+              var line_number = e?.line;
+          }
+          $ptwobject.ajax({
+              type: "GET",
+              url: 'https://wrapin.prezenapps.com/public/frontendexception',
+              async: false,
+              data: { shop: ptwShop, message: e.message, line_number:line_number, file_path: 'load-wrapin-v5-app.js' },
+              success: function(result) {}
+          });
+      }
+    })(window.jQuery, window, document);
+  });
+}

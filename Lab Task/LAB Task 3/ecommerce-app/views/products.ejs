@@ -1,0 +1,32 @@
+<div class="container mt-5">
+    <h1 class="mb-4">All Products</h1>
+
+    <% if (message) { %>
+        <div class="alert alert-<%= message.type %>">
+            <%= message.text %>
+        </div>
+    <% } %>
+
+    <div class="row">
+        <% products.forEach(product => { %>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <img src="<%= product.image %>" class="card-img-top" alt="<%= product.title %>">
+                    <div class="card-body">
+                        <h5 class="card-title"><%= product.title %></h5>
+                        <p class="card-text"><%= product.description %></p>
+                        <p class="card-text"><strong>£<%= product.price.toFixed(2) %></strong></p>
+                        <form action="/cart/add" method="POST">
+                            <input type="hidden" name="productId" value="<%= product._id %>">
+                            <input type="hidden" name="title" value="<%= product.title %>">
+                            <input type="hidden" name="price" value="<%= product.price %>">
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="btn btn-primary w-100">SHOP</button>
+                        </form>
+                        <a href="/products/<%= product._id %>" class="btn btn-outline-secondary mt-2 w-100">View Details</a>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+</div> 

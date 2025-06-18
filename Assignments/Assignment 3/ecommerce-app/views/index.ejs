@@ -1,0 +1,23 @@
+<main>
+  <section class="featured-section">
+    <div class="section-header">
+      <h2>INTRODUCING THE BLOOM BAG</h2>
+      <p>Discover ERDEM's modern femininity in The Bloom Bag</p>
+      <a href="#" class="cta-button">Explore</a>
+    </div>
+    <div class="carousel-container">
+      <div class="carousel-wrapper">
+        <div class="carousel-track">
+          <% products.forEach(product => { %>
+            <div class="product-card">
+              <img src="/<%= product.image %>" alt="<%= product.name %>">
+              <h3><%= product.name %></h3>
+              <p class="price"><%= product.price %></p>
+              <button class="shop-button">Shop</button>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>

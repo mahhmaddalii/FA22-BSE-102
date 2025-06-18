@@ -1,0 +1,11 @@
+@media (max-width: 768px) {
+  .template-index .half-image-half-border__col.border-item{
+    display: none;
+  }
+  .template-index .banner-half-half__inner .banner-half-half__col:last-child{
+    display: none;
+  }
+}
+.filter-form .filter-group-item .filter-group-display__list input[type=checkbox]+label {
+    text-transform: capitalize;
+}

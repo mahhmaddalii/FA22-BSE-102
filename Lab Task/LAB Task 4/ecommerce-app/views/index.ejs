@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERDEM - Fashion Collection</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <main>
+        <section class="carousel-section">
+            <div class="carousel-container">
+                <button class="carousel-button prev-button">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="carousel-wrapper">
+                    <div class="carousel-track">
+                        <% const springProducts = [
+                            { id: 'spring1', img: 'spring-summer-6.jpg', name: 'Evening Gown', price: '3995' },
+                            { id: 'spring2', img: 'spring-summer-7.jpg', name: 'Tailored Suit', price: '2795' },
+                            { id: 'spring3', img: 'spring-summer-8.jpg', name: 'Lace Dress', price: '2195' },
+                            { id: 'spring4', img: 'spring-summer-9.jpg', name: 'Velvet Jacket', price: '2495' },
+                            { id: 'spring5', img: 'spring-summer-10.jpg', name: 'Silk Dress', price: '2895' }
+                        ]; %>
+                        <% springProducts.forEach(p => { %>
+                            <form action="/cart/add" method="POST" class="product-card">
+                                <img src="/images/<%= p.img %>" alt="<%= p.name %>">
+                                <h3><%= p.name %></h3>
+                                <p class="price">£<%= Number(p.price).toLocaleString() %></p>
+                                <input type="hidden" name="productId" value="<%= p.id %>">
+                                <input type="hidden" name="title" value="<%= p.name %>">
+                                <input type="hidden" name="price" value="<%= p.price %>">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="shop-button">Shop</button>
+                            </form>
+                        <% }) %>
+                    </div>
+                </div>
+                <button class="carousel-button next-button">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <section class="collections-section">
+            <div class="collection-images">
+                <div class="collection-image">
+                    <img src="/images/autumn-winter.jpg" alt="Autumn Winter 25 Collection" width="1080" height="1400">
+                    <div class="collection-content">
+                        <h2>Autumn Winter 25</h2>
+                        <a href="#" class="cta-button">Explore</a>
+                    </div>
+                </div>
+                <div class="collection-image overlay-container">
+                    <img src="/images/hero-image-2.jpg" alt="Autumn Winter 25 Collection" width="1080" height="1400">
+                    <div class="overlay-image">
+                        <img src="/images/autumn-winter-middle.jpg" alt="Autumn Winter 25 Collection" width="200" height="200">
+                    </div>
+                </div>
+            </div>
+            <div class="section-header">
+                <h2>NEW ARRIVALS</h2>
+                <p>New season dresses, tops, knitwear and accessories from the latest collections by ERDEM.</p>
+                <a href="#" class="cta-button">Explore</a>
+            </div>
+        </section>
+
+        <section class="carousel-section">
+            <div class="carousel-container">
+                <button class="carousel-button prev-button">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="carousel-wrapper">
+                    <div class="carousel-track">
+                        <% const newArrivals = [
+                            { id: 'new1', img: 'new-product1.jpg', name: 'Floral Dress', price: '1995' },
+                            { id: 'new2', img: 'new-product2.jpg', name: 'Evening Gown', price: '2495' },
+                            { id: 'new3', img: 'new-product3.jpg', name: 'Summer Dress', price: '1795' },
+                            { id: 'new4', img: 'new-product4.jpg', name: 'Cocktail Dress', price: '2195' },
+                            { id: 'new5', img: 'new-product5.jpg', name: 'Silk Blouse', price: '895' },
+                            { id: 'new6', img: 'new-product6.jpg', name: 'Pleated Skirt', price: '995' },
+                            { id: 'new7', img: 'new-product7.jpg', name: 'Wool Coat', price: '2795' },
+                            { id: 'new8', img: 'new-product8.jpg', name: 'Tailored Blazer', price: '1595' }
+                        ]; %>
+                        <% newArrivals.forEach(p => { %>
+                            <form action="/cart/add" method="POST" class="product-card">
+                                <img src="/images/<%= p.img %>" alt="<%= p.name %>">
+                                <h3><%= p.name %></h3>
+                                <p class="price">£<%= Number(p.price).toLocaleString() %></p>
+                                <input type="hidden" name="productId" value="<%= p.id %>">
+                                <input type="hidden" name="title" value="<%= p.name %>">
+                                <input type="hidden" name="price" value="<%= p.price %>">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="shop-button">Shop</button>
+                            </form>
+                        <% }) %>
+                    </div>
+                </div>
+                <button class="carousel-button next-button">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <section class="w-image-section">
+            <div class="w-image-container">
+                <div class="w-image">
+                    <img src="/images/w-image1.jpg" alt="ERDEM Collection">
+                    <div class="w-image-content">
+                        <h2>Wardrobe Classics</h2>
+                        <a href="#" class="cta-button">Explore</a>
+                    </div>
+                </div>
+                <div class="w-image">
+                    <img src="/images/w-image-2.jpg" alt="ERDEM Collection">
+                    <div class="w-image-content">
+                        <h2>New Season</h2>
+                        <a href="#" class="cta-button">Explore</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>London Flagship</h3>
+                <ul>
+                    <li><a href="#">Store Information</a></li>
+                    <li><a href="#">Exclusive Services</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Client Services</h3>
+                <ul>
+                    <li><a href="#">Account</a></li>
+                    <li><a href="#">Contact Customer Service</a></li>
+                    <li><a href="#">Shipping & Delivery</a></li>
+                    <li><a href="#">Returns</a></li>
+                    <li><a href="#">FAQs</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Legal</h3>
+                <ul>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Cookie Policy</a></li>
+                    <li><a href="#">Terms & Conditions</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Erdem</h3>
+                <ul>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Contact</a></li>
+                    <li><a href="#">Gift Cards</a></li>
+                    <li><a href="#">Stockists</a></li>
+                    <li><a href="#">Erdem Bespoke</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="social-links">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-youtube"></i></a>
+                <a href="#"><i class="fab fa-tiktok"></i></a>
+                <a href="#"><i class="fab fa-pinterest"></i></a>
+                <a href="#"><i class="fab fa-tumblr"></i></a>
+            </div>
+            <p class="copyright">© ERDEM 2025</p>
+        </div>
+    </footer>
+    <script src="/script.js"></script>
+</body>
+</html>

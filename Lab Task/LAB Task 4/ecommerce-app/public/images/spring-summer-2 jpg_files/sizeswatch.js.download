@@ -1,0 +1,4 @@
+var appislive=false;
+[].forEach.call(document.querySelectorAll('.swatchprimarywrap'), function (el) {
+  el.style.visibility = 'visible';
+});
