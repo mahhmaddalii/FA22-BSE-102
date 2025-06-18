@@ -1,0 +1,62 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Manage Orders</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% orders.forEach(order => { %>
+                            <tr>
+                                <td><%= order._id %></td>
+                                <td>
+                                    <%= order.user && order.user.name ? order.user.name : (order.user && order.user.email ? order.user.email : 'N/A') %><br>
+                                    <small class="text-muted"><%= order.user && order.user.email ? order.user.email : '' %></small>
+                                </td>
+                                <td>
+                                    <ul class="list-unstyled mb-0">
+                                        <% order.items.forEach(item => { %>
+                                            <li><%= item.quantity %>x <%= item.product ? item.product.title : '' %></li>
+                                        <% }); %>
+                                    </ul>
+                                </td>
+                                <td>$<%= order.totalAmount.toFixed(2) %></td>
+                                <td>
+                                    <span class="badge bg-<%= order.status === 'delivered' ? 'success' : 'warning' %>">
+                                        <%= order.status %>
+                                    </span>
+                                </td>
+                                <td><%= new Date(order.createdAt).toLocaleDateString() %></td>
+                                <td>
+                                    <form action="/admin/orders/update-status/<%= order._id %>" method="POST" class="d-inline">
+                                        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                            <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                                            <option value="processing" <%= order.status === 'processing' ? 'selected' : '' %>>Processing</option>
+                                            <option value="shipped" <%= order.status === 'shipped' ? 'selected' : '' %>>Shipped</option>
+                                            <option value="delivered" <%= order.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %> 

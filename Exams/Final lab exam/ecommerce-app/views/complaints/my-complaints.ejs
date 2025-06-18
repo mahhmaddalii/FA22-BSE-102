@@ -1,0 +1,55 @@
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>My Complaints</h2>
+                <a href="/complaints/submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Submit New Complaint
+                </a>
+            </div>
+            
+            <% if (complaints.length === 0) { %>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> You haven't submitted any complaints yet.
+                    <a href="/complaints/submit" class="alert-link">Submit your first complaint</a>
+                </div>
+            <% } else { %>
+                <div class="row">
+                    <% complaints.forEach(complaint => { %>
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-<%= 
+                                        complaint.status === 'pending' ? 'warning' : 
+                                        complaint.status === 'in-progress' ? 'info' : 'success' 
+                                    %>">
+                                        <%= complaint.status.charAt(0).toUpperCase() + complaint.status.slice(1) %>
+                                    </span>
+                                    <small class="text-muted">
+                                        <%= new Date(complaint.createdAt).toLocaleDateString() %>
+                                    </small>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        Order #<%= complaint.orderId._id.toString().slice(-6) %>
+                                    </h6>
+                                    <p class="card-text">
+                                        <strong>Order Date:</strong> 
+                                        <%= new Date(complaint.orderId.createdAt).toLocaleDateString() %>
+                                    </p>
+                                    <p class="card-text">
+                                        <strong>Order Total:</strong> $<%= complaint.orderId.totalAmount %>
+                                    </p>
+                                    <p class="card-text">
+                                        <strong>Complaint:</strong><br>
+                                        <%= complaint.message %>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div> 

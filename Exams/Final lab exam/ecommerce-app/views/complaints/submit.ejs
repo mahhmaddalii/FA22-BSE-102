@@ -1,0 +1,41 @@
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Submit a Complaint</h3>
+                </div>
+                <div class="card-body">
+                    <form action="/complaints/submit" method="POST">
+                        <div class="mb-3">
+                            <label for="orderId" class="form-label">Select Order</label>
+                            <select class="form-select" id="orderId" name="orderId" required>
+                                <option value="">Choose an order...</option>
+                                <% orders.forEach(order => { %>
+                                    <option value="<%= order._id %>">
+                                        Order #<%= order._id.toString().slice(-6) %> - 
+                                        <%= new Date(order.createdAt).toLocaleDateString() %> - 
+                                        $<%= order.totalAmount %>
+                                    </option>
+                                <% }); %>
+                            </select>
+                            <div class="form-text">Select the order you want to file a complaint about.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Complaint Message</label>
+                            <textarea class="form-control" id="message" name="message" rows="5" 
+                                      placeholder="Please describe your complaint in detail..." required></textarea>
+                            <div class="form-text">Please provide as much detail as possible to help us resolve your issue.</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Submit Complaint</button>
+                            <a href="/complaints/my-complaints" class="btn btn-outline-secondary">View My Complaints</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
